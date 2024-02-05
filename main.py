@@ -3,6 +3,7 @@ from args import parse_args, parse_em_args
 from data import PromptEMData
 from train import self_training, self_training_only_plm
 from utils import set_seed, set_logger, read_entities, read_ground_truth_few_shot, read_ground_truth
+from utils import create_promptem_dataset_from_generated
 
 if __name__ == '__main__':
     common_args = parse_args()
@@ -10,6 +11,15 @@ if __name__ == '__main__':
     tasks = [common_args.data_name]
     if common_args.data_name == "all":
         tasks = ["rel-heter", "rel-text", "semi-heter", "semi-homo", "semi-rel", "semi-text-c", "semi-text-w", "geo-heter"]
+
+    tasks = ["generated-datasets"]
+
+    if "generated-datasets" in tasks:
+        create_promptem_dataset_from_generated( input_data_path = "test_datat", output_data_path = "data/generated-datasets/",
+                                                train_ratio = 0.7, test_ratio = 0.15, start_prompt = "This entity where ",
+                                                conjunction_prompt_pos = "is identical to the entity where",
+                                                conjunction_prompt_neg = "is not identical to the entity where")
+
     for data_type in tasks:
         # args and global data
         args = parse_em_args(common_args, data_type)

@@ -15,6 +15,7 @@ from args import PromptEMArgs
 from summarize import Summarizer
 from openprompt import PromptForClassification
 import csv
+from data_preprocessor import GeneratedDataPreprocessor
 
 
 def set_seed(seed):
@@ -119,6 +120,13 @@ def semi_serialize(line: dict, skip=True, add_token=True) -> str:
     return sen
 
 
+def create_promptem_dataset_from_generated(input_data_path,output_data_path,train_ratio = 0.7, test_ratio = 0.15, start_prompt = "",conjunction_prompt_pos = "",conjunction_prompt_neg = ""):
+    ## Just call the data pre-processor
+    datap = GeneratedDataPreprocessor( input_data_path, output_data_path, start_prompt = "This entity where ", conjunction_prompt_pos = "is identical to the entity where",
+							conjunction_prompt_neg = "is not identical to the entity where")
+    datap.create_dataset(train_ratio, test_ratio)
+
+
 def read_rel_entities(file_path: str, add_token=True, summarize=False):
     entities = []
     file_path += ".csv"
@@ -168,6 +176,14 @@ def read_text_entities(file_path: str, add_token=False, summarize=False):
         entities = new_entities
     return entities
 
+def read_generated_entities(file_path: str, add_token=False, summarize=False):
+    entities = []
+    with open(file_path, "r") as rd:
+        lines = rd.readlines()
+        for line in tqdm(lines, desc="read text entity..."):
+            text = line.strip()
+            entities.append(text)
+    return entities
 
 read_entities_funs = {
     "rel-heter": (read_rel_entities, read_rel_entities),
@@ -178,14 +194,19 @@ read_entities_funs = {
     "semi-text-w": (read_semi_entities, read_text_entities),
     "rel-text": (read_text_entities, read_rel_entities),
     "geo-heter": (read_rel_entities, read_rel_entities),
+    "generated-datasets" : (read_generated_entities, read_generated_entities)
 }
 
 
-def read_entities(data_type: str, args: PromptEMArgs):
+def read_entities(data_type: str, args: PromptEMArgs, data_path_prefix = None):
     read_entities_fun = read_entities_funs[data_type]
-    left_entities = read_entities_fun[0](f"data/{data_type}/left", add_token=args.add_token,
+    if data_path_prefix:
+        data_path = f"data/{data_type}/" + data_path_prefix
+    else:
+        data_path = f"data/{data_type}"
+    left_entities = read_entities_fun[0](data_path + "/left", add_token=args.add_token,
                                          summarize=args.text_summarize)
-    right_entities = read_entities_fun[1](f"data/{data_type}/right", add_token=args.add_token,
+    right_entities = read_entities_fun[1](data_path + "/right", add_token=args.add_token,
                                           summarize=args.text_summarize)
     return left_entities, right_entities
 
